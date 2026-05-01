@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,19 +8,185 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String           @id @default(cuid())
+  name            String
+  email           String           @unique
+  password        String
+  phone           String?
+  avatarUrl       String?
+  role            String           @default("EMPLOYER")
+  emailVerified   DateTime?
+  isActive        Boolean          @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  companyMembership CompanyMember[]
+  sentInvitations   CompanyInvitation[]
+  auditLogs         AdminAuditLog[]
+  notifications     Notification[]
+  resetToken        String?
+  resetTokenExpiry  DateTime?
 }
 
-model Post {
+model Company {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  email         String   @unique
+  phone         String?
+  logoUrl       String?
+  website       String?
+  description   String?
+  industry      String?
+  size          String   @default("1-10")
+  orgType       String   @default("PRIVATE")
+  county        String?
+  address       String?
+  isActive      Boolean  @default(true)
+  isVerified    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  members       CompanyMember[]
+  invitations   CompanyInvitation[]
+  jobs          Job[]
+  sponsoredAds  SponsoredAd[]
+  payments      Payment[]
+}
+
+model CompanyMember {
+  id         String   @id @default(cuid())
+  userId     String
+  companyId  String
+  role       String   @default("RECRUITER")
+  joinedAt   DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+}
+
+model CompanyInvitation {
+  id         String    @id @default(cuid())
+  email      String
+  companyId  String
+  role       String    @default("RECRUITER")
+  token      String    @unique
+  invitedBy  String
+  acceptedAt DateTime?
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+
+  inviter    User     @relation(fields: [invitedBy], references: [id])
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Job {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  description     String
+  requirements    String?
+  howToApply      String?
+  location        String
+  county          String?
+  type            String   @default("Full-Time")
+  experience      String   @default("mid")
+  category        String?
+  salaryMin       Int?
+  salaryMax       Int?
+  currency        String   @default("KSh")
+  isRemote        Boolean  @default(false)
+  closingDate     DateTime?
+  sourceUrl       String?
+  views           Int      @default(0)
+  status          String   @default("DRAFT")
+  rejectionReason String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  companyId       String
+  postedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company         Company  @relation(fields: [companyId], references: [id])
+  applications    JobApplication[]
+  sponsoredAd     SponsoredAd?
+}
+
+model JobApplication {
+  id              String   @id @default(cuid())
+  jobId           String
+  applicantName   String
+  applicantEmail  String
+  applicantPhone  String?
+  cvUrl           String?
+  coverLetter     String?
+  status          String   @default("pending")
+  employerNotes   String?
+  appliedAt       DateTime @default(now())
+
+  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, applicantEmail])
+}
+
+model SponsoredAd {
+  id            String   @id @default(cuid())
+  jobId         String   @unique
+  companyId     String
+  package       String   @default("basic")
+  amountPaid    Float?
+  paymentStatus String   @default("pending")
+  startDate     DateTime
+  endDate       DateTime
+  createdAt     DateTime @default(now())
+
+  company       Company  @relation(fields: [companyId], references: [id])
+  job           Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
   id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
+  companyId String?
+  reference String?  @unique
+  amount    Float
+  purpose   String   @default("featured_listing")
+  status    String   @default("pending")
+  paidAt    DateTime?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  company   Company? @relation(fields: [companyId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   @default("SYSTEM")
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  target    String?
+  details   String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model SeedMeta {
+  id     String @id @default("singleton")
+  seeded Boolean @default(false)
 }
