@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
 model User {
@@ -37,12 +38,12 @@ model Company {
   phone         String?
   logoUrl       String?
   website       String?
-  description   String?
+  description   String?  @db.Text
   industry      String?
   size          String   @default("1-10")
   orgType       String   @default("PRIVATE")
   county        String?
-  address       String?
+  address       String?  @db.Text
   isActive      Boolean  @default(true)
   isVerified    Boolean  @default(false)
   createdAt     DateTime @default(now())
@@ -87,9 +88,9 @@ model Job {
   id              String   @id @default(cuid())
   title           String
   slug            String   @unique
-  description     String
-  requirements    String?
-  howToApply      String?
+  description     String   @db.Text
+  requirements    String?  @db.Text
+  howToApply      String?  @db.Text
   location        String
   county          String?
   type            String   @default("Full-Time")
@@ -103,7 +104,7 @@ model Job {
   sourceUrl       String?
   views           Int      @default(0)
   status          String   @default("DRAFT")
-  rejectionReason String?
+  rejectionReason String?  @db.Text
   reviewedBy      String?
   reviewedAt      DateTime?
   companyId       String
@@ -123,9 +124,9 @@ model JobApplication {
   applicantEmail  String
   applicantPhone  String?
   cvUrl           String?
-  coverLetter     String?
+  coverLetter     String?  @db.Text
   status          String   @default("pending")
-  employerNotes   String?
+  employerNotes   String?  @db.Text
   appliedAt       DateTime @default(now())
 
   job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
@@ -179,7 +180,7 @@ model AdminAuditLog {
   userId    String
   action    String
   target    String?
-  details   String?
+  details   String?  @db.Text
   ip        String?
   createdAt DateTime @default(now())
 
@@ -187,6 +188,6 @@ model AdminAuditLog {
 }
 
 model SeedMeta {
-  id     String @id @default("singleton")
+  id     String @id @default("singleton") @db.VarChar(191)
   seeded Boolean @default(false)
 }
